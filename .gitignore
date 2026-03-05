@@ -12,3 +12,5 @@ __pycache__/
 venv/
 frontend_utiles/node_modules/
 frontend_utiles/dist/
+frontend_utiles/.vite/
+.vite/
