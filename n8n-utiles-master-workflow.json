@@ -1,0 +1,108 @@
+{
+    "name": "UTILES AI: Workflow Maître (Veille, Briefing et Publication)",
+    "nodes": [
+        {
+            "parameters": {
+                "url": "https://la1ere.francetvinfo.fr/martinique/index.rss"
+            },
+            "id": "e6f8a5a1-7d9a-4e2b-b8a9-f0e9d1c2b3a4",
+            "name": "RSS Martinique 1ère",
+            "type": "n8n-nodes-base.rssFeedTrigger",
+            "typeVersion": 1,
+            "position": [
+                300,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "model": "gpt-4-turbo",
+                "prompt": "={{ 'Tu es la **Sentinelle Madinina**, l\\'avatar numérique du parti UTILES en Martinique.\n\n### Principes du Parti :\nAutonomie, Écologie, Solidarité, Souveraineté, lutte contre la vie chère.\n\n### Actualité :\n' + $node[\"RSS Martinique 1ère\"].json[\"title\"] + '\n\n' + $node[\"RSS Martinique 1ère\"].json[\"contentSnippet\"] + '\n\nFais un résumé politique percutant pour la directrice. Identifie si cela touche à nos piliers (Vie chère, transport, écologie). Propose un angle d\\'attaque avec des expressions créoles.' }}",
+                "options": {
+                    "temperature": 0.7
+                }
+            },
+            "id": "f5e4d3c2-b1a0-4a9b-8c7d-6e5f4d3c2b1a",
+            "name": "Analyse Politique AI",
+            "type": "n8n-nodes-base.openAi",
+            "typeVersion": 1,
+            "position": [
+                550,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "chatId": "575528369",
+                "text": "={{ \"🚨 **ALERTE ACTU UTILES** 🚨\n\n\" + $node[\"Analyse Politique AI\"].json[\"choices\"][0][\"text\"] }}",
+                "replyMarkup": "inline_keyboard",
+                "inlineKeyboard": {
+                    "rows": [
+                        {
+                            "buttons": [
+                                {
+                                    "text": "✅ Générer Clip Vidéo (28s)",
+                                    "callback_data": "action_generate_video"
+                                },
+                                {
+                                    "text": "❌ Ignorer",
+                                    "callback_data": "action_ignore"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "additionalFields": {
+                    "parse_mode": "Markdown"
+                }
+            },
+            "id": "d1c2b3a4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+            "name": "Briefing Telegram + Boutons",
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1,
+            "position": [
+                800,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "command": "={{ \"python3 /home/utiles-ai/crewai_utiles_engine.py '\" + $node[\"RSS Martinique 1ère\"].json[\"title\"] + \"'\" }}"
+            },
+            "id": "b1a2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+            "name": "Lancer CrewAI (Vidéo)",
+            "type": "n8n-nodes-base.executeCommand",
+            "typeVersion": 1,
+            "position": [
+                1050,
+                450
+            ]
+        }
+    ],
+    "connections": {
+        "RSS Martinique 1ère": {
+            "main": [
+                [
+                    {
+                        "node": "Analyse Politique AI",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Analyse Politique AI": {
+            "main": [
+                [
+                    {
+                        "node": "Briefing Telegram + Boutons",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "active": false,
+    "settings": {}
+}
