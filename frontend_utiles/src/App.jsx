@@ -103,9 +103,25 @@ const App = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [generating, setGenerating] = useState(false);
 
-  const handleLaunchProduction = (campTitle) => {
+  const API_URL = "http://localhost:8000/api";
+
+  const handleLaunchProduction = async (campTitle) => {
     setGenerating(true);
-    alert(`Lancement de la production d'images (Flux King) et vidéo (Kling) pour la campagne : ${campTitle}`);
+    try {
+      const response = await fetch(`${API_URL}/launch-production`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: json.stringify({
+          topic: `Campagne ${campTitle} UTILES Martinique`,
+          camp_title: campTitle
+        }),
+      });
+      const data = await response.json();
+      alert(`Backend: ${data.message}. Moteur CrewAI en cours d'exécution.`);
+    } catch (err) {
+      console.error("Erreur Backend:", err);
+      alert("Erreur: Impossible de joindre le backend FastAPI sur le port 8000.");
+    }
     setTimeout(() => setGenerating(false), 3000);
   };
 
