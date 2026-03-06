@@ -291,22 +291,60 @@ const App = () => {
 
   const [studioStatus, setStudioStatus] = useState('idle');
   const [imageProgress, setImageProgress] = useState(0);
+  const [studioMessage, setStudioMessage] = useState('');
 
-  const startStudioProduction = () => {
+  const startStudioProduction = async () => {
     setStudioStatus('generating_scripts');
-    setTimeout(() => {
-      setStudioStatus('generating_images');
-      let count = 0;
-      const interval = setInterval(() => {
-        count += 1;
-        setImageProgress(count);
-        if (count === 7) {
-          clearInterval(interval);
+    setStudioMessage('Initialisation de la production...');
+
+    try {
+      const response = await fetch(`${API_URL}/launch-production`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: json.stringify({
+          topic: "Campagne UTILES Vidéo Studio",
+          camp_title: "Studio Clip"
+        }),
+      });
+      const data = await response.json();
+      const jobId = data.job_id;
+
+      // Polling pour le statut
+      const pollInterval = setInterval(async () => {
+        const statusRes = await fetch(`${API_URL}/production-status/${jobId}`);
+        const statusData = await statusRes.json();
+
+        if (statusData.status === 'completed') {
+          clearInterval(pollInterval);
           setStudioStatus('tiktok_workflow');
-          setTimeout(() => { setStudioStatus('idle'); setImageProgress(0); }, 2000);
+          setStudioMessage(statusData.message);
+          setTimeout(() => {
+            setStudioStatus('idle');
+            setImageProgress(0);
+            setStudioMessage('');
+          }, 3000);
+        } else if (statusData.status === 'error') {
+          clearInterval(pollInterval);
+          setStudioStatus('idle');
+          alert(`Erreur de production: ${statusData.message}`);
+        } else {
+          setStudioStatus(statusData.status);
+          setStudioMessage(statusData.message);
+          if (statusData.progress) {
+            // On déduit l'image progress si on est en phase images
+            if (statusData.status === 'generating_images') {
+              const imgNum = Math.floor((statusData.progress - 20) / (40 / 7));
+              setImageProgress(imgNum);
+            }
+          }
         }
-      }, 800);
-    }, 1500);
+      }, 2000);
+
+    } catch (err) {
+      console.error("Erreur Studio:", err);
+      setStudioStatus('idle');
+      alert("Erreur: Impossible de joindre le backend pour la production.");
+    }
   };
 
   const renderStudio = () => (
@@ -323,10 +361,9 @@ const App = () => {
             {studioStatus === 'idle' ? 'Générer Script & 7 Visuels' : 'Traitement...'}
           </button>
           {studioStatus !== 'idle' && (
-            <div style={{ marginTop: '1rem', fontSize: '0.8rem' }}>
-              {studioStatus === 'generating_scripts' && "🤖 CrewAI : Analyse et écriture..."}
-              {studioStatus === 'generating_images' && `📸 Flux King : Image ${imageProgress}/7...`}
-              {studioStatus === 'tiktok_workflow' && "🎬 Lancement Workflow TikTok..."}
+            <div style={{ marginTop: '1rem', fontSize: '0.8rem', color: 'var(--primary)', fontWeight: '600' }}>
+              {studioMessage || "Traitement en cours..."}
+              {studioStatus === 'generating_images' && ` (${imageProgress}/7)`}
             </div>
           )}
         </div>
